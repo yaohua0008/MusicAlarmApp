@@ -11,23 +11,10 @@ target 'MusicAlarmApp' do
 
   use_react_native!(
     :path => config[:reactNativePath],
-    # Hermes is now enabled by default. Disable by setting this flag to false.
     :hermes_enabled => flags[:hermes_enabled],
     :fabric_enabled => flags[:fabric_enabled],
-    # An absolute path to your application root.
     :app_path => "#{Pod::Config.instance.installation_root}/..",
-    # Note that if you have use_frameworks! enabled, Flipper will not work
-    
-    # Enables Flipper.
-    #
-    # Note that if you have use_frameworks! enabled, Flipper will not work.
-    :flipper_configuration => FlipperConfiguration.enabled([
-      'Flipper' => '0.125.0',
-      'Flipper-Folly' => '2.6.10',
-      'Flipper-RSocket' => '1.4.3',
-      'Flipper-DoubleConversion' => '3.2.0'
-    ]),
-    :production => false, # depends on whether you're running in production mode
+    :production => false # depends on whether you're running in production modeA
   )
 
   target 'MusicAlarmAppTests' do
