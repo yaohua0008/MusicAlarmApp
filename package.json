@@ -30,7 +30,7 @@
     "react-native-permissions": "^5.3.0",
     "react-native-mmkv": "^3.0.0",
     "dayjs": "^1.11.10",
-    "react-native-paper": "^5.12.4"，
+    "react-native-paper": "^5.12.4",
     "@react-native-async-storage/async-storage": "^1.19.0",
     "react-native-gesture-handler": "^2.14.0",
     "react-native-screens": "^3.29.0",
