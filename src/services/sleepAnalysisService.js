@@ -660,4 +660,3 @@ class SleepAnalysisService {
 const sleepAnalysisService = new SleepAnalysisService();
 
 export default sleepAnalysisService;
-export { SLEEP_STAGES, SLEEP_QUALITY_SCORES };
