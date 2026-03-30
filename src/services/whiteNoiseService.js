@@ -471,4 +471,3 @@ class WhiteNoiseService {
 const whiteNoiseService = new WhiteNoiseService();
 
 export default whiteNoiseService;
-export { WHITE_NOISE_TYPES };
