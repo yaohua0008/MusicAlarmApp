@@ -17,7 +17,7 @@ export const SLEEP_STAGES = {
 };
 
 // 睡眠质量评分标准
-const SLEEP_QUALITY_SCORES = {
+export const SLEEP_QUALITY_SCORES = {
   EXCELLENT: { min: 85, label: '优秀', color: '#2ECC71', emoji: '😊' },
   GOOD: { min: 70, label: '良好', color: '#3498DB', emoji: '🙂' },
   FAIR: { min: 50, label: '一般', color: '#F39C12', emoji: '😐' },
