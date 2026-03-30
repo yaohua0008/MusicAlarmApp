@@ -15,6 +15,7 @@ target 'MusicAlarmApp' do
     :fabric_enabled => flags[:fabric_enabled],
     :app_path => "#{Pod::Config.instance.installation_root}/..",
     :production => false,
+    :new_arch_enabled => false
   )
 
   target 'MusicAlarmAppTests' do
