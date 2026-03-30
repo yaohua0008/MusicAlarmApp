@@ -1,0 +1,95 @@
+name: Build iOS IPA (Unsigned)
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_config:
+        description: '构建配置 (Release/Debug)'
+        required: true
+        default: 'Release'
+        type: choice
+        options:
+          - Release
+          - Debug
+
+jobs:
+  build-ios:
+    runs-on: macos-15
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      - name: Install CocoaPods dependencies
+        run: |
+          cd ios
+          pod install --repo-update
+        env:
+          NO_FLIPPER: 1
+
+      - name: Bundle React Native JS
+        run: |
+          mkdir -p ios/main.jsbundle
+          npx react-native bundle \
+            --platform ios \
+            --dev false \
+            --entry-file index.js \
+            --bundle-output ios/main.jsbundle/main.jsbundle \
+            --assets-dest ios/main.jsbundle
+
+      - name: Build Xcode Archive (unsigned)
+        run: |
+          xcodebuild archive \
+            -workspace ios/MusicAlarmApp.xcworkspace \
+            -scheme MusicAlarmApp \
+            -configuration ${{ github.event.inputs.build_config }} \
+            -archivePath ios/build/MusicAlarmApp.xcarchive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            PROVISIONING_PROFILE="" \
+            | xcpretty || true
+
+      - name: Export unsigned IPA
+        run: |
+          mkdir -p ios/build/ipa
+          APP_PATH=$(find ios/build/MusicAlarmApp.xcarchive/Products -name "*.app" | head -1)
+          echo "Found .app at: $APP_PATH"
+          mkdir -p ios/build/ipa/Payload
+          cp -r "$APP_PATH" ios/build/ipa/Payload/
+          cd ios/build/ipa
+          zip -r MusicAlarmApp-unsigned.ipa Payload
+          echo "IPA created successfully!"
+          ls -lh MusicAlarmApp-unsigned.ipa
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MusicAlarmApp-unsigned-ipa
+          path: ios/build/ipa/MusicAlarmApp-unsigned.ipa
+          retention-days: 7
+
+      - name: Upload Archive artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MusicAlarmApp-xcarchive
+          path: ios/build/MusicAlarmApp.xcarchive
+          retention-days: 3
