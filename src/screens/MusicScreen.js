@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTheme, Surface, Card, Avatar, Button, IconButton, FAB, Divider, Chip, Searchbar, Portal } from 'react-native-paper';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 
 // 导入音乐服务和扫描器
