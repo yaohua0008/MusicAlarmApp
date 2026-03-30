@@ -31,6 +31,7 @@ jobs:
         run: |
           npm install --legacy-peer-deps
           npm install @react-native-community/cli --legacy-peer-deps
+          npm install react-native-reanimated --legacy-peer-deps
 
       - name: Generate iOS native project files
         run: |
