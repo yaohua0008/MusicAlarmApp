@@ -30,7 +30,7 @@ jobs:
       - name: Install Node dependencies
         run: |
           npm install
-          npm install @react-native-community/cli-platform-ios
+          npm install @react-native-community/cli
 
       - name: Cache CocoaPods
         uses: actions/cache@v4
