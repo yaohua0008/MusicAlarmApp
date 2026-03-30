@@ -32,7 +32,7 @@ jobs:
 
       - name: Generate iOS native project files
         run: |
-          npx react-native init MusicAlarmApp \
+          npx @react-native-community/cli@latest init MusicAlarmApp \
             --version 0.78.0 \
             --skip-install \
             --skip-git-init \
