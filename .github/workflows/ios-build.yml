@@ -1,0 +1,55 @@
+name: iOS Build and Release
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+
+    - name: Cache node modules
+      uses: actions/cache@v3
+      with:
+        path: node_modules
+        key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build iOS app
+      run: |
+        cd ios
+        pod install --repo-update
+        xcodebuild -workspace MusicAlarmApp.xcworkspace \
+                  -scheme MusicAlarmApp \
+                  -configuration Release \
+                  -destination generic/platform=iOS \
+                  -archivePath build/MusicAlarmApp.xcarchive \
+                  clean archive
+
+    - name: Export IPA
+      run: |
+        cd ios
+        xcodebuild -exportArchive \
+                  -archivePath build/MusicAlarmApp.xcarchive \
+                  -exportOptionsPlist ../ExportOptions.plist \
+                  -exportPath build/IPA \
+                  -allowProvisioningUpdates
+
+    - name: Upload IPA artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: MusicAlarmApp-iOS-IPA
+        path: ios/build/IPA/
