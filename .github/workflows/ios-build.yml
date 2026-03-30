@@ -15,7 +15,7 @@ on:
 jobs:
   build-ios:
     runs-on: macos-15
-    timeout-minutes: 60
+    timeout-minutes: 90
 
     steps:
       - name: Checkout repository
@@ -28,28 +28,65 @@ jobs:
           cache: 'npm'
 
       - name: Install Node dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Generate iOS native project files
         run: |
-          npm install --legacy-peer-deps
-          npm install @react-native-community/cli --legacy-peer-deps
+          npx react-native init MusicAlarmApp \
+            --version 0.78.0 \
+            --skip-install \
+            --skip-git-init \
+            --directory _tmp_ios_template
+          rm -rf ios
+          cp -r _tmp_ios_template/ios ios
+          rm -rf _tmp_ios_template
+          echo "=== ios 目录结构 ==="
+          ls -la ios/
+
+      - name: Write Podfile
+        run: |
+          cat > ios/Podfile << 'EOF'
+          require_relative '../node_modules/react-native/scripts/react_native_pods'
+          require_relative '../node_modules/@react-native-community/cli-platform-ios/native_modules'
+
+          platform :ios, min_ios_version_supported
+          prepare_react_native_project!
+
+          target 'MusicAlarmApp' do
+            config = use_native_modules!
+
+            use_react_native!(
+              :path => config[:reactNativePath],
+              :hermes_enabled => true,
+              :fabric_enabled => false,
+              :app_path => "#{Pod::Config.instance.installation_root}/..",
+            )
+
+            post_install do |installer|
+              react_native_post_install(
+                installer,
+                config[:reactNativePath],
+                :mac_catalyst_enabled => false,
+              )
+            end
+          end
+          EOF
+
       - name: Cache CocoaPods
         uses: actions/cache@v4
         with:
           path: ios/Pods
-          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile') }}-${{ hashFiles('package.json') }}
           restore-keys: |
             ${{ runner.os }}-pods-
-
-      - name: Fix react-native-screens codegen
-        run: |
-          cd node_modules/react-native-screens
-          rm -f src/screens/ModalScreenNativeComponent.ts
 
       - name: Install CocoaPods dependencies
         run: |
           cd ios
-          RCT_NEW_ARCH_ENABLED=0 pod install
+          pod install --repo-update
         env:
           NO_FLIPPER: 1
+          RCT_NEW_ARCH_ENABLED: 0
 
       - name: Bundle React Native JS
         run: |
