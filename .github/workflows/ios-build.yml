@@ -43,7 +43,7 @@ jobs:
       - name: Install CocoaPods dependencies
         run: |
           cd ios
-          pod install --repo-update
+          RCT_NEW_ARCH_ENABLED=0 pod install
         env:
           NO_FLIPPER: 1
 
