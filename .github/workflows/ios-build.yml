@@ -28,7 +28,9 @@ jobs:
           cache: 'npm'
 
       - name: Install Node dependencies
-        run: npm install
+        run: |
+          npm install
+          npm install @react-native-community/cli-platform-ios
 
       - name: Cache CocoaPods
         uses: actions/cache@v4
