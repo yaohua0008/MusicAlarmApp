@@ -28,7 +28,9 @@ jobs:
           cache: 'npm'
 
       - name: Install Node dependencies
-        run: npm install --legacy-peer-deps
+        run: |
+          npm install --legacy-peer-deps
+          npm install @react-native-community/cli --legacy-peer-deps
 
       - name: Generate iOS native project files
         run: |
