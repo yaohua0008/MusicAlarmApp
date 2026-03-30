@@ -127,51 +127,51 @@ export const WHITE_NOISE_TYPES = {
 // 音频资源映射（在开发阶段使用本地模拟，生产环境使用真实音频）
 const AUDIO_RESOURCES = {
   rain: Platform.select({
-    ios: require('../../assets/audio/rain.mp3'),
+    ios: { uri: 'https://www.soundjay.com/nature/sounds/rain-01.mp3' },
     android: { uri: 'asset:///audio/rain.mp3' },
   }),
   thunderstorm: Platform.select({
-    ios: require('../../assets/audio/thunderstorm.mp3'),
+    ios: { uri: 'https://www.soundjay.com/nature/sounds/thunder-01.mp3' },
     android: { uri: 'asset:///audio/thunderstorm.mp3' },
   }),
   ocean: Platform.select({
-    ios: require('../../assets/audio/ocean.mp3'),
+    ios: { uri: 'https://www.soundjay.com/nature/sounds/ocean-wave-01.mp3' },
     android: { uri: 'asset:///audio/ocean.mp3' },
   }),
   forest: Platform.select({
-    ios: require('../../assets/audio/forest.mp3'),
+    ios: { uri: 'https://www.soundjay.com/nature/sounds/forest-01.mp3' },
     android: { uri: 'asset:///audio/forest.mp3' },
   }),
   campfire: Platform.select({
-    ios: require('../../assets/audio/campfire.mp3'),
+    ios: { uri: 'https://www.soundjay.com/nature/sounds/fire-01.mp3' },
     android: { uri: 'asset:///audio/campfire.mp3' },
   }),
   wind: Platform.select({
-    ios: require('../../assets/audio/wind.mp3'),
+    ios: { uri: 'https://www.soundjay.com/nature/sounds/wind-01.mp3' },
     android: { uri: 'asset:///audio/wind.mp3' },
   }),
   white: Platform.select({
-    ios: require('../../assets/audio/white_noise.mp3'),
+    ios: { uri: 'https://www.soundjay.com/noise/sounds/white-noise-01.mp3' },
     android: { uri: 'asset:///audio/white_noise.mp3' },
   }),
   pink: Platform.select({
-    ios: require('../../assets/audio/pink_noise.mp3'),
+    ios: { uri: 'https://www.soundjay.com/noise/sounds/pink-noise-01.mp3' },
     android: { uri: 'asset:///audio/pink_noise.mp3' },
   }),
   brown: Platform.select({
-    ios: require('../../assets/audio/brown_noise.mp3'),
+    ios: { uri: 'https://www.soundjay.com/noise/sounds/brown-noise-01.mp3' },
     android: { uri: 'asset:///audio/brown_noise.mp3' },
   }),
   fan: Platform.select({
-    ios: require('../../assets/audio/fan.mp3'),
+    ios: { uri: 'https://www.soundjay.com/machine/sounds/fan-01.mp3' },
     android: { uri: 'asset:///audio/fan.mp3' },
   }),
   air_conditioner: Platform.select({
-    ios: require('../../assets/audio/air_conditioner.mp3'),
+    ios: { uri: 'https://www.soundjay.com/machine/sounds/air-conditioner-01.mp3' },
     android: { uri: 'asset:///audio/air_conditioner.mp3' },
   }),
   train: Platform.select({
-    ios: require('../../assets/audio/train.mp3'),
+    ios: { uri: 'https://www.soundjay.com/transportation/sounds/train-01.mp3' },
     android: { uri: 'asset:///audio/train.mp3' },
   }),
 };
