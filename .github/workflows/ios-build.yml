@@ -40,6 +40,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pods-
 
+      - name: Fix react-native-screens codegen
+        run: |
+          cd node_modules/react-native-screens
+          rm -f src/screens/ModalScreenNativeComponent.ts
+
       - name: Install CocoaPods dependencies
         run: |
           cd ios
