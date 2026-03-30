@@ -20,8 +20,6 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useTheme, Surface, Card, IconButton, Slider, Divider, Chip } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import * as Haptics from 'expo-haptics';
-
 // 导入服务和组件
 import musicService from '../services/musicService';
 import { setPlayingMusic, togglePlayPause, setPlaybackPosition } from '../store/slices/musicSlice';
@@ -133,7 +131,7 @@ const MusicPlayerScreen = () => {
   // 处理播放/暂停
   const handlePlayPause = async () => {
     try {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      Vibration.vibrate(50);
       
       if (playingMusic) {
         if (isPlaying) {
@@ -157,7 +155,7 @@ const MusicPlayerScreen = () => {
   // 处理上一首/下一首
   const handlePrevious = async () => {
     try {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      Vibration.vibrate(50);
       const previousMusic = await musicService.playPrevious();
       if (previousMusic) {
         dispatch(setPlayingMusic(previousMusic));
@@ -170,7 +168,7 @@ const MusicPlayerScreen = () => {
   
   const handleNext = async () => {
     try {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      Vibration.vibrate(50);
       const nextMusic = await musicService.playNext();
       if (nextMusic) {
         dispatch(setPlayingMusic(nextMusic));
@@ -209,13 +207,13 @@ const MusicPlayerScreen = () => {
     const currentIndex = modes.indexOf(repeatMode);
     const nextIndex = (currentIndex + 1) % modes.length;
     setRepeatMode(modes[nextIndex]);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Vibration.vibrate(50);
   };
   
   // 切换随机播放
   const toggleShuffleMode = () => {
     setShuffleMode(!shuffleMode);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Vibration.vibrate(50);
   };
   
   // 切换歌词显示
@@ -226,7 +224,7 @@ const MusicPlayerScreen = () => {
       useNativeDriver: true,
     }).start();
     setShowLyrics(!showLyrics);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Vibration.vibrate(50);
   };
   
   // 调整播放速度
@@ -236,7 +234,7 @@ const MusicPlayerScreen = () => {
     const nextIndex = (currentIndex + 1) % rates.length;
     setPlaybackRate(rates[nextIndex]);
     musicService.setPlaybackRate(rates[nextIndex]);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Vibration.vibrate(50);
   };
   
   // 示例歌词数据
