@@ -1,33 +1,55 @@
-name: Build iOS App
+name: Build iOS App v3
+
 on:
-  workflow_dispatch:
   push:
     branches:
       - master
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: macos-15
+    
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm install --legacy-peer-deps
-      - run: cd ios && pod install --repo-update
-      - run: |
+      
+      - name: Install npm dependencies
+        run: npm install --legacy-peer-deps
+      
+      - name: Install CocoaPods dependencies
+        run: cd ios && pod install --repo-update
+      
+      - name: Build iOS app
+        run: |
           cd ios
-          xcodebuild -workspace MusicAlarmApp.xcworkspace \
+          xcodebuild \
+            -workspace MusicAlarmApp.xcworkspace \
             -scheme MusicAlarmApp \
             -configuration Release \
             -derivedDataPath build \
             -arch arm64 \
-            build \
-            ONLY_ACTIVE_ARCH=NO \
             CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO
-      - if: success()
+            CODE_SIGNING_REQUIRED=NO \
+            build
+      
+      - name: Package IPA
+        if: success()
+        run: |
+          cd ios/build/Release-iphoneos
+          mkdir -p Payload
+          mv MusicAlarmApp.app Payload/
+          zip -r ../../MusicAlarmApp-unsigned.ipa Payload/
+      
+      - name: Upload IPA
+        if: success()
         uses: actions/upload-artifact@v3
         with:
-          name: MusicAlarmApp-ipa
-          path: ios/build/Release-iphoneos/MusicAlarmApp.app
+          name: MusicAlarmApp-IPA
+          path: ios/MusicAlarmApp-unsigned.ipa
+          retention-days: 30
