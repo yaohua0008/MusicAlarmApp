@@ -1,4 +1,4 @@
-name: Build iOS App v3
+name: Build iOS App v4
 
 on:
   push:
@@ -8,9 +8,16 @@ on:
 
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-latest
     
     steps:
+      - name: Debug - System info
+        run: |
+          uname -a
+          xcodebuild -version
+          node --version
+          npm --version
+      
       - name: Checkout code
         uses: actions/checkout@v4
       
