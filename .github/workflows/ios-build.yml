@@ -1,4 +1,4 @@
-name: Build iOS - 兼容 iOS 26.3.1 修复版
+name: Build iOS
 
 on:
   workflow_dispatch:
@@ -15,30 +15,28 @@ jobs:
         with:
           node-version: '20'
       
-      - name: 修复 package.json - 降低目标版本
-        run: |
-          # 使用 sed 修改 package.json 中的 ios 目标版本
-          sed -i '' 's/"platforms": {/"platforms": {/' package.json
-          
       - name: Install dependencies
         run: npm install --legacy-peer-deps
       
-      - name: 生成完整的 iOS 项目
-        run: |
-          # 清空旧的 ios 目录
-          rm -rf ios
-          # 生成新的项目
-          npx react-native init MusicAlarmApp --skip-install 2>/dev/null || true
-          # 或者用 Xcode 兼容的版本
-          npx react-native@latest init --template typescript ios 2>/dev/null || true
+      - name: Install CocoaPods
+        run: sudo gem install cocoapods
       
-      - name: 复制源代码到新的 ios 目录
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.0'
+      
+      - name: Generate iOS project if missing
         run: |
-          # 如果生成失败，手动创建 Podfile
           if [ ! -f ios/Podfile ]; then
-            mkdir -p ios
-            cat > ios/Podfile << 'EOF'
-platform :ios, '15.0'  # 改为 iOS 15 以支持 iOS 26
+            mkdir -p ios/MusicAlarmApp
+            npx react-native init MusicAlarmApp --skip-install 2>/dev/null || true
+          fi
+      
+      - name: Prepare Podfile
+        run: |
+          cat > ios/Podfile << 'EOF'
+platform :ios, '15.0'
 
 target 'MusicAlarmApp' do
   config = use_native_modules!
@@ -49,130 +47,58 @@ target 'MusicAlarmApp' do
     :fabric_enabled => false,
     :new_arch_enabled => false
   )
-  
-  # 所有必要的原生模块
-  pod 'react-native-track-player', :path => '../node_modules/react-native-track-player'
-  pod 'react-native-vector-icons', :path => '../node_modules/react-native-vector-icons'
-  pod 'react-native-gesture-handler', :path => '../node_modules/react-native-gesture-handler'
-  pod 'RNDateTimePicker', :path => '../node_modules/@react-native-community/datetimepicker'
-  pod 'react-native-svg', :path => '../node_modules/react-native-svg'
-  pod 'RNCSlider', :path => '../node_modules/@react-native-community/slider'
-  pod 'react-native-fs', :path => '../node_modules/react-native-fs'
-  
-  target 'MusicAlarmAppTests' do
-    inherit! :complete
-  end
-end
 
-post_install do |installer|
-  react_native_post_install(
-    installer,
-    config["reactNativePath"],
-    :mac_catalyst_enabled => false,
-    :ccache_enabled => true
-  )
+  pod 'react-native-track-player', :path => '../node_modules/react-native-track-player'
+  pod 'RNCAsyncStorage', :path => '../node_modules/@react-native-async-storage/async-storage'
   
-  # 禁用新架构相关代码
-  installer.pods_project.targets.each do |target|
-    target.build_configurations.each do |config|
-      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= []
-      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'RCT_NEW_ARCH_ENABLED=0'
-      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'FABRIC_ENABLED=0'
+  post_install do |installer|
+    installer.pods_project.targets.each do |target|
+      flutter_additional_ios_build_settings(target)
     end
   end
 end
 EOF
-          fi
       
-      - name: Pod install
+      - name: Install CocoaPods dependencies
         run: |
           cd ios
           pod install --repo-update
       
-      - name: 创建最小化的 Info.plist
-        run: |
-          cat > ios/MusicAlarmApp/Info.plist << 'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>CFBundleDevelopmentRegion</key>
-	<string>zh_CN</string>
-	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
-	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	<key>CFBundleInfoDictionaryVersion</key>
-	<string>6.0</string>
-	<key>CFBundleName</key>
-	<string>$(PRODUCT_NAME)</string>
-	<key>CFBundlePackageType</key>
-	<string>APPL</string>
-	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
-	<key>CFBundleVersion</key>
-	<string>1</string>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
-	<key>UIDeviceFamily</key>
-	<array>
-		<integer>1</integer>
-	</array>
-	<key>UILaunchStoryboardName</key>
-	<string>LaunchScreen</string>
-	<key>UIMainStoryboardFile</key>
-	<string></string>
-	<key>UIRequiredDeviceCapabilities</key>
-	<array>
-		<string>armv7</string>
-	</array>
-	<key>UISupportedInterfaceOrientations</key>
-	<array>
-		<integer>1</integer>
-	</array>
-	<key>UIViewControllerBasedStatusBarAppearance</key>
-	<false/>
-	<!-- 音乐权限 -->
-	<key>NSAppleMusicUsageDescription</key>
-	<string>需要访问您的音乐库来选择闹钟铃声</string>
-	<!-- 存储权限 -->
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>需要本地网络权限</string>
-	<!-- 日历权限（如果需要） -->
-	<key>NSCalendarsUsageDescription</key>
-	<string>需要访问日历来同步闹钟</string>
-	<!-- 提醒事项权限（如果需要） -->
-	<key>NSRemindersUsageDescription</key>
-	<string>需要访问提醒事项</string>
-</dict>
-</plist>
-EOF
-      
-      - name: Build iOS app
+      - name: Build iOS App
         run: |
           cd ios
-          xcodebuild \
-            -workspace MusicAlarmApp.xcworkspace \
+          xcodebuild -workspace MusicAlarmApp.xcworkspace \
             -scheme MusicAlarmApp \
             -configuration Release \
             -derivedDataPath build \
             -arch arm64 \
-            -sdk iphoneos \
+            build \
+            ONLY_ACTIVE_ARCH=NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
+            PROVISIONING_PROFILE="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            RCT_NEW_ARCH_ENABLED=0 \
             2>&1 | tee build.log
       
-      - name: 生成 IPA
+      - name: Create unsigned IPA
         run: |
           cd ios/build/Release-iphoneos
-          mkdir -p Payload
-          cp -r MusicAlarmApp.app Payload/
-          zip -r ../MusicAlarmApp-unsigned.ipa Payload/
-          mv ../MusicAlarmApp-unsigned.ipa ../../../MusicAlarmApp-unsigned-ios26-fix.ipa
+          mkdir -p MusicAlarmApp.app/Frameworks
+          zip -r MusicAlarmApp.ipa MusicAlarmApp.app
+          ls -lh MusicAlarmApp.ipa
       
-      - name: Upload IPA
+      - name: Upload IPA artifact
+        if: success()
         uses: actions/upload-artifact@v3
         with:
-          name: MusicAlarmApp-iOS26-Fix
-          path: MusicAlarmApp-unsigned-ios26-fix.ipa
+          name: MusicAlarmApp-unsigned.ipa
+          path: ios/build/Release-iphoneos/MusicAlarmApp.ipa
+          retention-days: 30
+      
+      - name: Check build log
+        if: failure()
+        run: |
+          if [ -f ios/build.log ]; then
+            tail -100 ios/build.log
+          fi
