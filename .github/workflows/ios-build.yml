@@ -48,14 +48,14 @@ jobs:
 
       - name: Write Podfile
         run: |
-          cat > ios/Podfile << 'EOF'
+          cat > ios/Podfile << 'PODEOF'
           require_relative '../node_modules/react-native/scripts/react_native_pods'
-         
+
           platform :ios, min_ios_version_supported
           prepare_react_native_project!
 
           target 'MusicAlarmApp' do
-            config = { reactNativePath: '../node_modules/react-native' }
+            config = use_native_modules!
 
             use_react_native!(
               :path => config[:reactNativePath],
@@ -72,7 +72,7 @@ jobs:
               )
             end
           end
-          EOF
+          PODEOF
 
       - name: Cache CocoaPods
         uses: actions/cache@v4
