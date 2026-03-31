@@ -1,38 +1,43 @@
-require_relative '../node_modules/react-native/scripts/react_native_pods'
-
-platform :ios, '13.0'
-project 'MusicAlarmApp.xcodeproj'
+platform :ios, '15.0'
 
 target 'MusicAlarmApp' do
   config = use_native_modules!
-
-  # Flags change depending on the env values.
-  flags = get_default_flags()
-
+  
   use_react_native!(
-    :path => config[:reactNativePath],
-    :hermes_enabled => flags[:hermes_enabled],
-    :fabric_enabled => flags[:fabric_enabled],
-    :app_path => "#{Pod::Config.instance.installation_root}/..",
-    :production => false,
+    :path => config["reactNativePath"],
+    :hermes_enabled => true,
+    :fabric_enabled => false,
     :new_arch_enabled => false
   )
-
+  
+  # 所有必要的原生模块
+  pod 'react-native-track-player', :path => '../node_modules/react-native-track-player'
+  pod 'react-native-vector-icons', :path => '../node_modules/react-native-vector-icons'
+  pod 'react-native-gesture-handler', :path => '../node_modules/react-native-gesture-handler'
+  pod 'RNDateTimePicker', :path => '../node_modules/@react-native-community/datetimepicker'
+  pod 'react-native-svg', :path => '../node_modules/react-native-svg'
+  pod 'RNCSlider', :path => '../node_modules/@react-native-community/slider'
+  pod 'react-native-fs', :path => '../node_modules/react-native-fs'
+  
   target 'MusicAlarmAppTests' do
     inherit! :complete
-    # Pods for testing
   end
+end
 
-  post_install do |installer|
-    react_native_post_install(installer)
-    __apply_Xcode_12_5_M1_post_install_workaround(installer)
-    
-    # Fix for React Native 0.78+
-    installer.pods_project.targets.each do |target|
-      target.build_configurations.each do |config|
-        config.build_settings['APPLICATION_EXTENSION_API_ONLY'] = 'NO'
-        config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'YES'
-      end
+post_install do |installer|
+  react_native_post_install(
+    installer,
+    config["reactNativePath"],
+    :mac_catalyst_enabled => false,
+    :ccache_enabled => true
+  )
+  
+  # 禁用新架构相关代码
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= []
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'RCT_NEW_ARCH_ENABLED=0'
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'FABRIC_ENABLED=0'
     end
   end
 end
