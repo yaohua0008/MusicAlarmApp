@@ -1,71 +1,21 @@
-name: Build iOS
-
+name: Build iOS App
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - master
 
 jobs:
   build:
     runs-on: macos-15
-    
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      
-      - name: Install dependencies
-        run: npm install --legacy-peer-deps
-      
-      - name: Install CocoaPods
-        run: sudo gem install cocoapods
-      
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.0'
-      
-      - name: Generate iOS project if missing
-        run: |
-          if [ ! -f ios/Podfile ]; then
-            mkdir -p ios/MusicAlarmApp
-            npx react-native init MusicAlarmApp --skip-install 2>/dev/null || true
-          fi
-      
-      - name: Prepare Podfile
-        run: |
-          cat > ios/Podfile << 'EOF'
-platform :ios, '15.0'
-
-target 'MusicAlarmApp' do
-  config = use_native_modules!
-  
-  use_react_native!(
-    :path => config["reactNativePath"],
-    :hermes_enabled => true,
-    :fabric_enabled => false,
-    :new_arch_enabled => false
-  )
-
-  pod 'react-native-track-player', :path => '../node_modules/react-native-track-player'
-  pod 'RNCAsyncStorage', :path => '../node_modules/@react-native-async-storage/async-storage'
-  
-  post_install do |installer|
-    installer.pods_project.targets.each do |target|
-      flutter_additional_ios_build_settings(target)
-    end
-  end
-end
-EOF
-      
-      - name: Install CocoaPods dependencies
-        run: |
-          cd ios
-          pod install --repo-update
-      
-      - name: Build iOS App
-        run: |
+      - run: npm install --legacy-peer-deps
+      - run: cd ios && pod install --repo-update
+      - run: |
           cd ios
           xcodebuild -workspace MusicAlarmApp.xcworkspace \
             -scheme MusicAlarmApp \
@@ -75,30 +25,9 @@ EOF
             build \
             ONLY_ACTIVE_ARCH=NO \
             CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            PROVISIONING_PROFILE="" \
-            PROVISIONING_PROFILE_SPECIFIER="" \
-            RCT_NEW_ARCH_ENABLED=0 \
-            2>&1 | tee build.log
-      
-      - name: Create unsigned IPA
-        run: |
-          cd ios/build/Release-iphoneos
-          mkdir -p MusicAlarmApp.app/Frameworks
-          zip -r MusicAlarmApp.ipa MusicAlarmApp.app
-          ls -lh MusicAlarmApp.ipa
-      
-      - name: Upload IPA artifact
-        if: success()
+            CODE_SIGNING_REQUIRED=NO
+      - if: success()
         uses: actions/upload-artifact@v3
         with:
-          name: MusicAlarmApp-unsigned.ipa
-          path: ios/build/Release-iphoneos/MusicAlarmApp.ipa
-          retention-days: 30
-      
-      - name: Check build log
-        if: failure()
-        run: |
-          if [ -f ios/build.log ]; then
-            tail -100 ios/build.log
-          fi
+          name: MusicAlarmApp-ipa
+          path: ios/build/Release-iphoneos/MusicAlarmApp.app
