@@ -31,7 +31,9 @@ jobs:
 
       # ── 3. 安装 JS 依赖 ──────────────────────────────────────────
       - name: Install Node dependencies
-        run: npm install --legacy-peer-deps
+        run: |
+          npm install --legacy-peer-deps
+          npm install --no-save --legacy-peer-deps @react-native-community/cli-platform-ios
 
       # ── 4. 生成 iOS 原生项目结构 ─────────────────────────────────
       # 用 react-native init 生成完整的 .xcodeproj / AppDelegate 等文件
