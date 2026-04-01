@@ -1,62 +1,169 @@
-name: Build iOS App v4
+name: Build iOS IPA (Unsigned)
 
 on:
-  push:
-    branches:
-      - master
   workflow_dispatch:
+    inputs:
+      build_config:
+        description: '构建配置 (Release/Debug)'
+        required: true
+        default: 'Release'
+        type: choice
+        options:
+          - Release
+          - Debug
 
 jobs:
-  build:
-    runs-on: macos-latest
-    
+  build-ios:
+    runs-on: macos-15
+    timeout-minutes: 90
+
     steps:
-      - name: Debug - System info
-        run: |
-          uname -a
-          xcodebuild -version
-          node --version
-          npm --version
-      
-      - name: Checkout code
+      # ── 1. 检出代码 ──────────────────────────────────────────────
+      - name: Checkout repository
         uses: actions/checkout@v4
-      
+
+      # ── 2. 设置 Node.js 环境 ─────────────────────────────────────
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      
-      - name: Install npm dependencies
+          cache: 'npm'
+
+      # ── 3. 安装 JS 依赖 ──────────────────────────────────────────
+      - name: Install Node dependencies
         run: npm install --legacy-peer-deps
-      
+
+      # ── 4. 生成 iOS 原生项目结构 ─────────────────────────────────
+      # 用 react-native init 生成完整的 .xcodeproj / AppDelegate 等文件
+      # 再把你仓库里的 Podfile / ExportOptions.plist 覆盖回去
+      - name: Generate iOS native project files
+        run: |
+          # 用当前已安装的 react-native 版本初始化一个临时项目
+          npx react-native init MusicAlarmApp \
+            --version 0.78.0 \
+            --skip-install \
+            --skip-git-init \
+            --directory _tmp_ios_template
+
+          # 把生成的 ios 目录整体复制到项目根目录，替换原来残缺的 ios
+          rm -rf ios
+          cp -r _tmp_ios_template/ios ios
+
+          # 用仓库里原有的 Podfile 和 ExportOptions.plist 覆盖模板里的
+          cp _tmp_ios_template/../ExportOptions.plist ios/ExportOptions.plist 2>/dev/null || true
+
+          # 清理临时目录
+          rm -rf _tmp_ios_template
+
+          echo "=== ios 目录结构 ==="
+          ls -la ios/
+          ls -la ios/MusicAlarmApp.xcodeproj/ 2>/dev/null || echo "xcodeproj not found"
+
+      # ── 5. 写入正确的 Podfile ────────────────────────────────────
+      - name: Write Podfile
+        run: |
+          cat > ios/Podfile << 'EOF'
+          require_relative '../node_modules/react-native/scripts/react_native_pods'
+          require_relative '../node_modules/@react-native-community/cli-platform-ios/native_modules'
+
+          platform :ios, min_ios_version_supported
+          prepare_react_native_project!
+
+          linkage = ENV['USE_FRAMEWORKS']
+          if linkage != nil
+            Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
+            use_frameworks! :linkage => linkage.to_sym
+          end
+
+          target 'MusicAlarmApp' do
+            config = use_native_modules!
+
+            use_react_native!(
+              :path => config[:reactNativePath],
+              :hermes_enabled => true,
+              :fabric_enabled => false,
+              :app_path => "#{Pod::Config.instance.installation_root}/..",
+              :production => false,
+            )
+
+            post_install do |installer|
+              react_native_post_install(
+                installer,
+                config[:reactNativePath],
+                :mac_catalyst_enabled => false,
+              )
+            end
+          end
+          EOF
+
+      # ── 6. 获取 CocoaPods 缓存 ───────────────────────────────────
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile') }}-${{ hashFiles('package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      # ── 7. 安装 CocoaPods 依赖 ───────────────────────────────────
       - name: Install CocoaPods dependencies
-        run: cd ios && pod install --repo-update
-      
-      - name: Build iOS app
         run: |
           cd ios
-          xcodebuild \
-            -workspace MusicAlarmApp.xcworkspace \
+          pod install --repo-update
+        env:
+          NO_FLIPPER: 1
+          RCT_NEW_ARCH_ENABLED: 0
+
+      # ── 8. 打包 JS Bundle ────────────────────────────────────────
+      - name: Bundle React Native JS
+        run: |
+          mkdir -p ios/main.jsbundle
+          npx react-native bundle \
+            --platform ios \
+            --dev false \
+            --entry-file index.js \
+            --bundle-output ios/main.jsbundle/main.jsbundle \
+            --assets-dest ios/main.jsbundle
+
+      # ── 9. 构建 Archive（无代码签名） ────────────────────────────
+      - name: Build Xcode Archive (unsigned)
+        run: |
+          xcodebuild archive \
+            -workspace ios/MusicAlarmApp.xcworkspace \
             -scheme MusicAlarmApp \
-            -configuration Release \
-            -derivedDataPath build \
-            -arch arm64 \
+            -configuration ${{ github.event.inputs.build_config }} \
+            -archivePath ios/build/MusicAlarmApp.xcarchive \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            build
-      
-      - name: Package IPA
-        if: success()
+            CODE_SIGNING_ALLOWED=NO \
+            PROVISIONING_PROFILE="" \
+            | xcpretty || true
+
+      # ── 10. 导出未签名 IPA ───────────────────────────────────────
+      - name: Export unsigned IPA
         run: |
-          cd ios/build/Release-iphoneos
-          mkdir -p Payload
-          mv MusicAlarmApp.app Payload/
-          zip -r ../../MusicAlarmApp-unsigned.ipa Payload/
-      
-      - name: Upload IPA
-        if: success()
-        uses: actions/upload-artifact@v3
+          mkdir -p ios/build/ipa
+          APP_PATH=$(find ios/build/MusicAlarmApp.xcarchive/Products -name "*.app" | head -1)
+          echo "Found .app at: $APP_PATH"
+          mkdir -p ios/build/ipa/Payload
+          cp -r "$APP_PATH" ios/build/ipa/Payload/
+          cd ios/build/ipa
+          zip -r MusicAlarmApp-unsigned.ipa Payload
+          echo "IPA created successfully!"
+          ls -lh MusicAlarmApp-unsigned.ipa
+
+      # ── 11. 上传 IPA 产物 ────────────────────────────────────────
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: MusicAlarmApp-IPA
-          path: ios/MusicAlarmApp-unsigned.ipa
-          retention-days: 30
+          name: MusicAlarmApp-unsigned-ipa
+          path: ios/build/ipa/MusicAlarmApp-unsigned.ipa
+          retention-days: 7
+
+      # ── 12. 上传 Archive（可选，用于调试） ──────────────────────
+      - name: Upload Archive artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MusicAlarmApp-xcarchive
+          path: ios/build/MusicAlarmApp.xcarchive
+          retention-days: 3
