@@ -61,7 +61,33 @@ jobs:
           ls -la ios/
           ls -la ios/MusicAlarmApp.xcodeproj/ 2>/dev/null || echo "xcodeproj not found"
 
-      # ── 5. 写入正确的 Podfile ────────────────────────────────────
+      # ── 5. 修补 Info.plist（权限与后台音频） ─────────────────────
+      - name: Patch Info.plist for iOS permissions
+        run: |
+          INFO_PLIST="ios/MusicAlarmApp/Info.plist"
+
+          /usr/libexec/PlistBuddy -c "Delete :UIBackgroundModes" "$INFO_PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" "$INFO_PLIST"
+          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string audio" "$INFO_PLIST"
+
+          /usr/libexec/PlistBuddy -c "Set :NSAppleMusicUsageDescription 需要访问您的音乐库用于选择闹钟铃声" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :NSAppleMusicUsageDescription string 需要访问您的音乐库用于选择闹钟铃声" "$INFO_PLIST"
+          /usr/libexec/PlistBuddy -c "Set :NSLocalNetworkUsageDescription 需要本地网络权限以支持局域网相关功能" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :NSLocalNetworkUsageDescription string 需要本地网络权限以支持局域网相关功能" "$INFO_PLIST"
+          /usr/libexec/PlistBuddy -c "Set :NSCalendarsUsageDescription 需要访问日历来同步闹钟计划" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :NSCalendarsUsageDescription string 需要访问日历来同步闹钟计划" "$INFO_PLIST"
+          /usr/libexec/PlistBuddy -c "Set :NSRemindersUsageDescription 需要访问提醒事项以创建提醒" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :NSRemindersUsageDescription string 需要访问提醒事项以创建提醒" "$INFO_PLIST"
+
+          /usr/libexec/PlistBuddy -c "Delete :NSBonjourServices" "$INFO_PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSBonjourServices array" "$INFO_PLIST"
+          /usr/libexec/PlistBuddy -c "Add :NSBonjourServices:0 string _airplay._tcp" "$INFO_PLIST"
+
+          echo "=== Info.plist 关键字段 ==="
+          /usr/libexec/PlistBuddy -c "Print :UIBackgroundModes" "$INFO_PLIST"
+          /usr/libexec/PlistBuddy -c "Print :NSAppleMusicUsageDescription" "$INFO_PLIST"
+          /usr/libexec/PlistBuddy -c "Print :NSLocalNetworkUsageDescription" "$INFO_PLIST"
+          /usr/libexec/PlistBuddy -c "Print :NSCalendarsUsageDescription" "$INFO_PLIST"
+          /usr/libexec/PlistBuddy -c "Print :NSRemindersUsageDescription" "$INFO_PLIST"
+          /usr/libexec/PlistBuddy -c "Print :NSBonjourServices" "$INFO_PLIST"
+
+      # ── 6. 写入正确的 Podfile ────────────────────────────────────
       - name: Write Podfile
         run: |
           cat > ios/Podfile << 'EOF'
@@ -97,7 +123,8 @@ jobs:
           end
           EOF
 
-      # ── 6. 获取 CocoaPods 缓存 ───────────────────────────────────
+      # ── 7. 获取 CocoaPods 缓存 ───────────────────────────────────
+
       - name: Cache CocoaPods
         uses: actions/cache@v4
         with:
